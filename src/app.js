@@ -10,6 +10,23 @@ app.use(cors());
 
 const repositories = [];
 
+const validateId = (request, response, next) => {
+  const { id } = request.params;
+
+  const repositoryIndex = repositories.findIndex(repository => repository.id === id);
+
+  if (repositoryIndex < 0) {
+    return response.status(400).json({ "error": "Invalid repository ID." });
+  }
+
+  response.locals = {
+    id,
+    repositoryIndex
+  };
+
+  next();
+}
+
 app.get("/repositories", (request, response) => {
   return response.json(repositories);
 });
@@ -30,55 +47,31 @@ app.post("/repositories", (request, response) => {
   response.json(repository);
 });
 
-app.put("/repositories/:id", (request, response) => {
-  const { id } = request.params;
+app.put("/repositories/:id", validateId, (request, response) => {
   const { title, url, techs } = request.body;
 
-  const repositoryIndex = repositories.findIndex(repository => repository.id === id);
-
-  if (repositoryIndex < 0) {
-    return response.status(400).json({ "error": "Invalid repository ID." });
-  }
-
   const repository = {
-    ...repositories[repositoryIndex],
+    ...repositories[response.locals.repositoryIndex],
     title,
     url,
     techs
   };
 
-  repositories[repositoryIndex] = repository;
+  repositories[response.locals.repositoryIndex] = repository;
 
   return response.json(repository);
 });
 
-app.delete("/repositories/:id", (request, response) => {
-  const { id } = request.params;
-
-  const repositoryIndex = repositories.findIndex(repository => repository.id === id);
-
-  if (repositoryIndex < 0) {
-    return response.status(400).json({ "error": "Invalid repository ID." });
-  }
-
-  repositories.splice(repositoryIndex, 1);
+app.delete("/repositories/:id", validateId, (request, response) => {
+  repositories.splice(response.locals.repositoryIndex, 1);
 
   return response.status(204).send();
 });
 
-app.post("/repositories/:id/like", (request, response) => {
-  const { id } = request.params;
+app.post("/repositories/:id/like", validateId, (request, response) => {
+  repositories[response.locals.repositoryIndex].likes++;
 
-  const repositoryIndex = repositories.findIndex(repository => repository.id === id);
-
-  if (repositoryIndex < 0) {
-    return response.status(400).json({ "error": "Invalid repository ID." });
-  }
-
-  repositories[repositoryIndex].likes++;
-
-  return response.json(repositories[repositoryIndex]);
-
+  return response.json(repositories[response.locals.repositoryIndex]);
 });
 
 module.exports = app;
